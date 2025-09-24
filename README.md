@@ -71,7 +71,7 @@ go mod tidy
 package main
 
 import (
-    "gitlab.corp.algento.com/loadtest/workerclient"
+    "loadtestx/workerclient"
 )
 
 func main() {
@@ -281,7 +281,7 @@ Enable debug logging by setting appropriate log levels in your application.
 
 ## License
 
-This project is licensed under internal license for Algento company use only.
+MIT License.
 
 ## Contributing
 
