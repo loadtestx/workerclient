@@ -18,7 +18,7 @@ type CaseRunnerInfo struct {
 	DurationMinutes           uint64
 	WorkerTotal               uint64
 	WorkerIndex               uint64
-	WorkerSize                uint64
+	WorkerConcurrency         uint64
 }
 
 type CaseRunner struct {
@@ -120,11 +120,11 @@ func (cr *CaseRunner) Run() {
 			return
 		}
 		coroutineParams := map[string]string{
-			InnerVarGoroutineId:   fmt.Sprintf("%v-%v", cr.TestCase.Name, i),
-			InnerVarExecutorIndex: fmt.Sprintf("%v", i),
-			InnerVarWorkerTotal:   fmt.Sprintf("%v", cr.Info.WorkerTotal),
-			InnerVarWorkerIndex:   fmt.Sprintf("%v", cr.Info.WorkerIndex),
-			InnerVarWorkerSize:    fmt.Sprintf("%v", cr.Info.WorkerSize),
+			InnerVarGoroutineId:       fmt.Sprintf("%v-%v", cr.TestCase.Name, i),
+			InnerVarExecutorIndex:     fmt.Sprintf("%v", i),
+			InnerVarWorkerTotal:       fmt.Sprintf("%v", cr.Info.WorkerTotal),
+			InnerVarWorkerIndex:       fmt.Sprintf("%v", cr.Info.WorkerIndex),
+			InnerVarWorkerConcurrency: fmt.Sprintf("%v", cr.Info.WorkerConcurrency),
 		}
 		go func(gp, cp map[string]string, rql *RpsQLimiter, op *Output, _cr *CaseRunner) {
 			cr.TestCase.Run(gp, cp, rql, op, _cr)

@@ -41,26 +41,32 @@ func (rw *WorkerRunner) RealRun() {
 		if tc == nil {
 			return
 		}
-		rmc := int64(rspWPS.TestCaseInfo.BaseInfo.MaxConcurrencyCount)
-		wsize := int64(rspWPS.TestCaseInfo.BaseInfo.WorkerSize)
+		baseInfo := rspWPS.TestCaseInfo.BaseInfo
+		rmc := int64(baseInfo.TotalMaxConcurrency)
+		workerConc := int64(baseInfo.WorkerConcurrency)
 		widx := rw.Worker.BaseInfo.Index
-		if rmc-wsize*widx <= 0 {
+
+		// Calculate the concurrency that the current worker should use
+		var currentWorkerConcurrency uint64
+		remaining := rmc - workerConc*widx
+
+		if remaining <= 0 {
 			return
 		}
-		if rmc-wsize*widx < wsize {
-			rspWPS.TestCaseInfo.BaseInfo.MaxConcurrencyCount = uint64(rmc - wsize*widx)
+		if remaining < workerConc {
+			currentWorkerConcurrency = uint64(remaining)
 		} else {
-			rspWPS.TestCaseInfo.BaseInfo.MaxConcurrencyCount = uint64(wsize)
+			currentWorkerConcurrency = uint64(workerConc)
 		}
 		rw.Worker.BaseInfo.Status = "running"
 		caseRunnerInfo := CaseRunnerInfo{
 			WorkerName:                rw.Worker.BaseInfo.Name,
-			MaxConcurrencyInThisWoker: rspWPS.TestCaseInfo.BaseInfo.MaxConcurrencyCount,
-			RampingSeconds:            rspWPS.TestCaseInfo.BaseInfo.RampingSeconds,
-			DurationMinutes:           rspWPS.TestCaseInfo.BaseInfo.DurationMinutes,
+			MaxConcurrencyInThisWoker: currentWorkerConcurrency,
+			RampingSeconds:            baseInfo.RampingSeconds,
+			DurationMinutes:           baseInfo.DurationMinutes,
 			WorkerTotal:               rspWPS.TestCaseInfo.WorkerTotal,
 			WorkerIndex:               uint64(widx),
-			WorkerSize:                rspWPS.TestCaseInfo.BaseInfo.WorkerSize,
+			WorkerConcurrency:         baseInfo.WorkerConcurrency,
 		}
 		rw.RunningCaseRunner = &CaseRunner{
 			Info:           caseRunnerInfo,
@@ -114,12 +120,12 @@ func (rw *WorkerRunner) PushStatus() (rwps *RspWorkerPushStatus) {
 		}
 	}
 
-	// 准备请求参数
+	// Prepare request parameters
 	params := &WorkerPushStatusParams{
 		BaseInfo: rw.Worker.BaseInfo,
 	}
 
-	// 发送HTTP请求
+	// Send HTTP request
 	targetUrl := fmt.Sprintf("%v/worker/push_status", rw.CoordinatorApi)
 	rsp := &RspWorkerPushStatusBody{}
 

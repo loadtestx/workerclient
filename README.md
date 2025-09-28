@@ -119,63 +119,63 @@ func main() {
 type CaseBaseInfo struct {
     Name                string            `json:"name"`                // Test case name
     GlobalParams        map[string]string `json:"globalParams"`        // Global parameters
-    MaxConcurrencyCount uint64            `json:"maxConcurrencyCount"` // Maximum concurrency
+    TotalMaxConcurrency  uint64            `json:"totalMaxConcurrency"`  // Total maximum concurrency across all workers
     RampingSeconds      uint64            `json:"rampingSeconds"`      // Ramping time (seconds)
     DurationMinutes     uint64            `json:"durationMinutes"`     // Duration (minutes)
-    WorkerSize          uint64            `json:"workerSize"`          // Worker size
+    WorkerConcurrency     uint64            `json:"workerConcurrency"`     // Concurrency per individual worker
 }
 ```
 
-### GenReqParamsFunc 参数生成函数
+### GenReqParamsFunc Parameter Generation Function
 
-`GenReqParamsFunc` 是一个关键的回调函数，用于在每个测试步骤执行前动态生成请求参数。它接收一个包含完整上下文信息的 `CaseParams` 对象，并返回一个参数映射，这些参数将被传递给 `ReqPluginFunc`。
+`GenReqParamsFunc` is a key callback function that dynamically generates request parameters before each test step execution. It receives a `CaseParams` object containing complete context information and returns a parameter map that will be passed to `ReqPluginFunc`.
 
-### 函数签名
+### Function Signature
 ```go
 func(caseParams *CaseParams) map[string]string
 ```
 
-### CaseParams 结构体
+### CaseParams Structure
 
-`CaseParams` 结构体包含执行测试步骤时所需的所有上下文信息：
+The `CaseParams` structure contains all the context information required for test step execution:
 
 ```go
 type CaseParams struct {
-    GlobalParams    map[string]string  // 全局参数（来自测试用例配置）
-    CoroutineParams map[string]string  // 协程级别的参数（每个并发执行器独立）
-    CaseRunnerInfo  CaseRunnerInfo     // 运行器信息
+    GlobalParams    map[string]string  // Global parameters (from test case configuration)
+    CoroutineParams map[string]string  // Coroutine-level parameters (independent per concurrent executor)
+    CaseRunnerInfo  CaseRunnerInfo     // Runner information
 }
 ```
 
-### CaseRunnerInfo 结构体
+### CaseRunnerInfo Structure
 
 ```go
 type CaseRunnerInfo struct {
-    WorkerName                string  // 工作器名称
-    MaxConcurrencyInThisWoker uint64  // 当前工作器的最大并发数
-    RampingSeconds            uint64  // 梯度增加时间（秒）
-    DurationMinutes           uint64  // 持续时间（分钟）
-    WorkerTotal               uint64  // 总工作器数量
-    WorkerIndex               uint64  // 当前工作器索引
-    WorkerSize                uint64  // 工作器规模
+    WorkerName                string  // Worker name
+    MaxConcurrencyInThisWoker uint64  // Maximum concurrency in this worker
+    RampingSeconds            uint64  // Ramping time (seconds)
+    DurationMinutes           uint64  // Duration (minutes)
+    WorkerTotal               uint64  // Total number of workers
+    WorkerIndex               uint64  // Current worker index
+    WorkerConcurrency         uint64  // Concurrency per worker
 }
 ```
 
-### 可用内部变量
+### Available Internal Variables
 
-在 `GenReqParamsFunc` 中可以访问以下内部变量（通过 `CoroutineParams`）：
+The following internal variables can be accessed in `GenReqParamsFunc` (via `CoroutineParams`):
 
-- `__goroutine_id`: Goroutine ID（格式："testcaseName-index"）
-- `__executor_index`: 执行器索引
-- `__worker_total`: 总工作器数量
-- `__worker_index`: 当前工作器索引
-- `__worker_size`: 工作器规模
+- `__goroutine_id`: Goroutine ID (format: "testcaseName-index")
+- `__executor_index`: Executor index
+- `__worker_total`: Total number of workers
+- `__worker_index`: Current worker index
+- `__worker_concurrency`: Concurrency per worker
 
-注意：`__name`（步骤名称）会在 `GenReqParamsFunc` 执行后自动注入到请求参数中。
+Note: `__name` (step name) will be automatically injected into request parameters after `GenReqParamsFunc` execution.
 
-### 使用场景示例
+### Usage Examples
 
-#### 1. 静态参数生成
+#### 1. Static Parameter Generation
 ```go
 GenReqParamsFunc: func(caseParams *CaseParams) map[string]string {
     return map[string]string{
@@ -186,7 +186,7 @@ GenReqParamsFunc: func(caseParams *CaseParams) map[string]string {
 }
 ```
 
-#### 2. 动态参数生成（基于执行上下文）
+#### 2. Dynamic Parameter Generation (Based on Execution Context)
 ```go
 GenReqParamsFunc: func(caseParams *CaseParams) map[string]string {
     executorIndex := caseParams.CoroutineParams["__executor_index"]
@@ -200,7 +200,7 @@ GenReqParamsFunc: func(caseParams *CaseParams) map[string]string {
 }
 ```
 
-#### 3. 基于全局参数的动态配置
+#### 3. Dynamic Configuration Based on Global Parameters
 ```go
 GenReqParamsFunc: func(caseParams *CaseParams) map[string]string {
     baseUrl := caseParams.GlobalParams["base_url"]
@@ -214,12 +214,12 @@ GenReqParamsFunc: func(caseParams *CaseParams) map[string]string {
 }
 ```
 
-#### 4. 复杂的业务逻辑参数生成
+#### 4. Complex Business Logic Parameter Generation
 ```go
 GenReqParamsFunc: func(caseParams *CaseParams) map[string]string {
     params := make(map[string]string)
     
-    // 基于执行器索引生成不同的测试数据
+    // Generate different test data based on executor index
     index, _ := strconv.Atoi(caseParams.CoroutineParams["__executor_index"])
     params["test_data_id"] = fmt.Sprintf("data_%04d", index)
     
@@ -227,19 +227,33 @@ GenReqParamsFunc: func(caseParams *CaseParams) map[string]string {
 }
 ```
 
-### 最佳实践
+### Best Practices
 
-1. **参数复用性**: 尽量使用全局参数进行配置，便于统一管理
-2. **唯一性保证**: 对于需要唯一性的参数（如用户ID、请求ID），利用执行器信息确保唯一
-3. **错误处理**: 确保参数生成逻辑的健壮性，避免因为参数缺失导致测试失败
-4. **性能考虑**: 避免在参数生成函数中执行耗时的操作
+1. **Parameter Reusability**: Use global parameters for configuration to facilitate unified management
+2. **Uniqueness Guarantee**: Use executor information to ensure uniqueness for parameters that require it (e.g., user ID, request ID)
+3. **Error Handling**: Ensure robustness in parameter generation logic to avoid test failures due to missing parameters
+4. **Performance Considerations**: Avoid performing time-consuming operations in parameter generation functions
 
-### 注意事项
+### RpsLimitFunc RPS Limiting Function
 
-- `GenReqParamsFunc` 在每个请求执行前都会被调用
-- 返回的参数映射将被传递给 `ReqPluginFunc` 使用
-- 可以修改和扩展参数，但不能修改 `CaseParams` 结构体本身
-- 系统会自动注入 `__name` 参数（步骤名称）到最终的请求参数中
+`RpsLimitFunc` is used to limit the request frequency (RPS - Requests Per Second) for **individual workers**. It receives runner information and global parameters, and returns the maximum RPS allowed for that worker.
+
+#### Function Signature
+```go
+func(caseRunnerInfo CaseRunnerInfo, globalParams map[string]string) uint64
+```
+
+#### Parameter Description
+- `caseRunnerInfo`: Runtime information of the current worker, including concurrency, worker index, etc.
+- `globalParams`: Global configuration parameters
+- **Return value**: Maximum RPS allowed for this worker (requests per second)
+
+### Notes
+
+- `GenReqParamsFunc` is called before each request execution
+- The returned parameter map will be passed to `ReqPluginFunc`
+- Parameters can be modified and extended, but the `CaseParams` structure itself cannot be modified
+- The `__name` parameter (step name) is automatically injected into the final request parameters
 
 ## Internal Variables
 
@@ -250,7 +264,7 @@ The system automatically injects the following internal variables into request p
 - `__executor_index`: Executor index
 - `__worker_total`: Total number of workers
 - `__worker_index`: Worker index
-- `__worker_size`: Worker size
+- `__worker_concurrency`: Concurrency per worker
 
 ## API Interfaces
 
@@ -330,9 +344,8 @@ testStep := &workerclient.TestStep{
     },
     ContinueWhenFailed: false, // Whether to continue on failure
     RpsLimitFunc: func(caseRunnerInfo workerclient.CaseRunnerInfo, globalParams map[string]string) uint64 {
-        // RPS limiting
         return 100
-    },
+    } // Rps per worker,
 }
 ```
 

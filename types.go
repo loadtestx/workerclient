@@ -20,14 +20,14 @@ type RspWorkerPushStatus struct {
 }
 
 type CaseBaseInfo struct {
-	Name                string            `json:"name" binding:"required"`
-	GlobalParams        map[string]string `json:"globalParams" binding:"required"`
-	MaxConcurrencyCount uint64            `json:"maxConcurrencyCount" binding:"required"`
-	RampingSeconds      uint64            `json:"rampingSeconds" binding:"required"`
-	DurationMinutes     uint64            `json:"durationMinutes"  binding:"required"`
-	WorkName            string            `json:"workName" binding:"required"`
-	WorkerSize          uint64            `json:"workerSize" binding:"required"`
-	TaskId              string            `json:"taskId"`
+	Name                 string            `json:"name" binding:"required"`
+	GlobalParams         map[string]string `json:"globalParams" binding:"required"`
+	TotalMaxConcurrency  uint64            `json:"totalMaxConcurrency" binding:"required"`
+	RampingSeconds       uint64            `json:"rampingSeconds" binding:"required"`
+	DurationMinutes      uint64            `json:"durationMinutes"  binding:"required"`
+	WorkName             string            `json:"workName" binding:"required"`
+	WorkerConcurrency     uint64            `json:"workerConcurrency" binding:"required"`
+	TaskId               string            `json:"taskId"`
 }
 
 type TestCaseInfo struct {

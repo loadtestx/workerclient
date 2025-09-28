@@ -6,12 +6,12 @@ import (
 )
 
 const (
-	InnerVarName          = "__name"
-	InnerVarGoroutineId   = "__goroutine_id"
-	InnerVarExecutorIndex = "__executor_index"
-	InnerVarWorkerTotal   = "__worker_total"
-	InnerVarWorkerIndex   = "__worker_index"
-	InnerVarWorkerSize    = "__worker_size"
+	InnerVarName              = "__name"
+	InnerVarGoroutineId       = "__goroutine_id"
+	InnerVarExecutorIndex     = "__executor_index"
+	InnerVarWorkerTotal       = "__worker_total"
+	InnerVarWorkerIndex       = "__worker_index"
+	InnerVarWorkerConcurrency = "__worker_concurrency"
 )
 
 type IResultV1 interface {
