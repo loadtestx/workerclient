@@ -84,7 +84,7 @@ func main() {
     // Add test step
     testCase.AddStep(&workerclient.TestStep{
         StepName: "login",
-        ReqPluginFunc: func(params map[string]string) interface{} {
+        ReqPluginFunc: func(params map[string]string) IResultV1 {
             // Implement specific request logic
             result := workerclient.AcquireResult("login")
             result.Begin()
@@ -197,7 +197,7 @@ func (p *CustomRequestPlugin) Execute(params map[string]string) workerclient.IRe
 ```go
 testStep := &workerclient.TestStep{
     StepName: "custom_step",
-    ReqPluginFunc: func(params map[string]string) interface{} {
+    ReqPluginFunc: func(params map[string]string) IResultV1 {
         // Request processing logic
     },
     GenReqParamsFunc: func(caseParams *workerclient.CaseParams) map[string]string {

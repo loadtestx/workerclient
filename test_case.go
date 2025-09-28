@@ -27,7 +27,7 @@ type TestCase struct {
 type TestStep struct {
 	StepIndex            string
 	StepName             string
-	ReqPluginFunc        func(reqPamrams map[string]string) (res interface{})
+	ReqPluginFunc        func(reqPamrams map[string]string) (res IResultV1)
 	SetRuntimeParamsFunc func(caseParmas *CaseParmas)
 	GenReqParamsFunc     func(caseParmas *CaseParmas) (p map[string]string)
 	ContinueWhenFailed   bool
@@ -102,7 +102,7 @@ func (tc *TestCase) Run(globalParams, coroutineParams map[string]string, rpsQLim
 
 			ts.PreFunc(caseParmas, reqParams)
 			results := []IResultV1{}
-			res := interface{}(ts.ReqPluginFunc(reqParams)).(IResultV1)
+			res := ts.ReqPluginFunc(reqParams)
 			subResults := res.GetSubResults()
 			if len(subResults) == 0 {
 				results = append(results, res)
