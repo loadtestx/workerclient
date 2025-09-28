@@ -66,8 +66,8 @@ func (cr *CaseRunner) Run() {
 	for _, ts := range cr.TestCase.Teststeps {
 		rps := ts.RpsLimitFunc(cr.Info, cr.GlobalParams)
 		if rps > 0 {
-			rpsQLimiter.Limter.CreateNewKey(ts.StepIndex, rps, time.Second)
-			rpsQLimiter.QMap[ts.StepIndex] = queue.New()
+			rpsQLimiter.Limter.CreateNewKey(ts.GetStepIndex(), rps, time.Second)
+			rpsQLimiter.QMap[ts.GetStepIndex()] = queue.New()
 		}
 	}
 

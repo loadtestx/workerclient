@@ -60,7 +60,7 @@ type Result struct {
 	BeginTime      int64
 	EndTime        int64
 	SubResults     []interface{}
-	SubIndex       int
+	subIndex       int
 }
 
 func (r *Result) GetName() string {
@@ -135,8 +135,8 @@ func (r *Result) End() {
 
 func (r *Result) AddSub(name string, useNamePrefix bool) *Result {
 	if name == "" {
-		name = fmt.Sprintf("%s-%d", r.Name, r.SubIndex)
-		r.SubIndex++
+		name = fmt.Sprintf("%s-%d", r.Name, r.subIndex)
+		r.subIndex++
 	} else {
 		if useNamePrefix {
 			name = fmt.Sprintf("%s-%s", r.Name, name)

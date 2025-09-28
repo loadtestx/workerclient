@@ -11,10 +11,9 @@ func NewTestCase(caseName string) *TestCase {
 	}
 }
 
-type CaseParmas struct {
+type CaseParams struct {
 	GlobalParams    map[string]string
 	CoroutineParams map[string]string
-	RuntimeParams   map[string]string
 	CaseRunnerInfo  CaseRunnerInfo
 }
 
@@ -25,32 +24,32 @@ type TestCase struct {
 }
 
 type TestStep struct {
-	StepIndex            string
+	stepIndex            string
 	StepName             string
 	ReqPluginFunc        func(reqPamrams map[string]string) (res IResultV1)
-	SetRuntimeParamsFunc func(caseParmas *CaseParmas)
-	GenReqParamsFunc     func(caseParmas *CaseParmas) (p map[string]string)
+	GenReqParamsFunc     func(caseParams *CaseParams) (p map[string]string)
 	ContinueWhenFailed   bool
-	ExecWhenFunc         func(caseParmas *CaseParmas, reqPamrams map[string]string) (b bool)
-	PreFunc              func(caseParmas *CaseParmas, reqPamrams map[string]string)
-	PostFunc             func(caseParmas *CaseParmas, reqPamrams map[string]string, res IResultV1)
+	ExecWhenFunc         func(caseParams *CaseParams, reqPamrams map[string]string) (b bool)
+	PreFunc              func(caseParams *CaseParams, reqPamrams map[string]string)
+	PostFunc             func(caseParams *CaseParams, reqPamrams map[string]string, res IResultV1)
 	RpsLimitFunc         func(caseRunnerInfo CaseRunnerInfo, globalParams map[string]string) (rps uint64)
 }
 
+func (ts *TestStep) GetStepIndex() string {
+	return ts.stepIndex
+}
+
 func (tc *TestCase) AddStep(ts *TestStep) {
-	if ts.SetRuntimeParamsFunc == nil {
-		ts.SetRuntimeParamsFunc = func(caseParmas *CaseParmas) {}
-	}
 	if ts.ExecWhenFunc == nil {
-		ts.ExecWhenFunc = func(caseParmas *CaseParmas, reqPamrams map[string]string) (b bool) { return true }
+		ts.ExecWhenFunc = func(caseParams *CaseParams, reqPamrams map[string]string) (b bool) { return true }
 	}
 
 	if ts.PreFunc == nil {
-		ts.PreFunc = func(caseParmas *CaseParmas, reqPamrams map[string]string) {}
+		ts.PreFunc = func(caseParams *CaseParams, reqPamrams map[string]string) {}
 	}
 
 	if ts.PostFunc == nil {
-		ts.PostFunc = func(caseParmas *CaseParmas, reqPamrams map[string]string, res IResultV1) {}
+		ts.PostFunc = func(caseParams *CaseParams, reqPamrams map[string]string, res IResultV1) {}
 	}
 
 	if ts.RpsLimitFunc == nil {
@@ -59,15 +58,14 @@ func (tc *TestCase) AddStep(ts *TestStep) {
 		}
 	}
 
-	ts.StepIndex = fmt.Sprintf("%v", len(tc.Teststeps))
+	ts.stepIndex = fmt.Sprintf("%v", len(tc.Teststeps))
 	tc.Teststeps = append(tc.Teststeps, ts)
 }
 
 func (tc *TestCase) Run(globalParams, coroutineParams map[string]string, rpsQLimiter *RpsQLimiter, output *Output, caseRunner *CaseRunner) {
-	caseParmas := &CaseParmas{
+	caseParams := &CaseParams{
 		GlobalParams:    globalParams,
 		CoroutineParams: coroutineParams,
-		RuntimeParams:   map[string]string{},
 		CaseRunnerInfo:  caseRunner.Info,
 	}
 
@@ -79,19 +77,18 @@ func (tc *TestCase) Run(globalParams, coroutineParams map[string]string, rpsQLim
 			if !caseRunner.IsRunning {
 				break
 			}
-			ts.SetRuntimeParamsFunc(caseParmas)
-			reqParams := ts.GenReqParamsFunc(caseParmas)
+			reqParams := ts.GenReqParamsFunc(caseParams)
 			reqParams[InnerVarName] = ts.StepName
-			reqParams[InnerVarGoroutineId] = caseParmas.CoroutineParams[InnerVarGoroutineId]
-			reqParams[InnerVarExecutorIndex] = caseParmas.CoroutineParams[InnerVarExecutorIndex]
-			if !ts.ExecWhenFunc(caseParmas, reqParams) {
+			reqParams[InnerVarGoroutineId] = caseParams.CoroutineParams[InnerVarGoroutineId]
+			reqParams[InnerVarExecutorIndex] = caseParams.CoroutineParams[InnerVarExecutorIndex]
+			if !ts.ExecWhenFunc(caseParams, reqParams) {
 				continue
 			}
 
-			if rpsQLimiter.Limter.HasKey(ts.StepIndex) {
+			if rpsQLimiter.Limter.HasKey(ts.GetStepIndex()) {
 				ch := make(chan bool)
 				rpsQLimiter.Lock.Lock()
-				rpsQLimiter.QMap[ts.StepIndex].Add(ch)
+				rpsQLimiter.QMap[ts.GetStepIndex()].Add(ch)
 				rpsQLimiter.Lock.Unlock()
 				<-ch
 			}
@@ -100,7 +97,7 @@ func (tc *TestCase) Run(globalParams, coroutineParams map[string]string, rpsQLim
 				break
 			}
 
-			ts.PreFunc(caseParmas, reqParams)
+			ts.PreFunc(caseParams, reqParams)
 			results := []IResultV1{}
 			res := ts.ReqPluginFunc(reqParams)
 			subResults := res.GetSubResults()
@@ -114,7 +111,7 @@ func (tc *TestCase) Run(globalParams, coroutineParams map[string]string, rpsQLim
 
 			ok := true
 			for _, result := range results {
-				ts.PostFunc(caseParmas, reqParams, result)
+				ts.PostFunc(caseParams, reqParams, result)
 				ok = result.IsSuccess() && ok
 				if output.ResChans != nil {
 					output.ResChans <- result
@@ -123,6 +120,7 @@ func (tc *TestCase) Run(globalParams, coroutineParams map[string]string, rpsQLim
 			if !ok && !ts.ContinueWhenFailed {
 				break
 			}
+
 
 		}
 		time.Sleep(100 * time.Millisecond)
